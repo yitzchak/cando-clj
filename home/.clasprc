@@ -5,10 +5,3 @@
   (when (probe-file quicklisp-init)
     (load quicklisp-init)))
 
-(setq eclector.readtable:*readtable* cl:*readtable*)
-
-(defmethod eclector.readtable:syntax-type  ((readtable cl:readtable) char)
-  (core:syntax-type readtable char))
-
-(defmethod eclector.readtable:get-macro-character ((readtable cl:readtable) char)
-  (cl:get-macro-character char readtable))
