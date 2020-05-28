@@ -26,30 +26,27 @@ ENV USER ${APP_USER}
 ENV HOME /home/${APP_USER}
 ENV PATH "/opt/clasp/bin:$HOME/.local/bin:$PATH"
 
-RUN useradd --create-home --shell=/bin/false --uid=${APP_UID} ${APP_USER}
+RUN useradd --create-home --shell=/bin/bash --uid=${APP_UID} ${APP_USER}
+COPY --chown=${APP_UID}:${APP_USER} home ${HOME}
 
 WORKDIR ${HOME}
 USER ${APP_USER}
 
 RUN wget https://beta.quicklisp.org/quicklisp.lisp && \
     sbcl --load quicklisp.lisp --eval "(quicklisp-quickstart:install)" --quit && \
-    rm quicklisp.lisp
-
-RUN echo "fu"
-RUN git clone https://github.com/clasp-developers/clasp.git
-
-WORKDIR ${HOME}/clasp
-RUN echo "USE_PARALLEL_BUILD = True" > wscript.config && \
+    rm quicklisp.lisp && \
+    git clone https://github.com/clasp-developers/bordeaux-threads.git ${HOME}/quicklisp/local-projects/bordeaux-threads && \
+    git clone https://github.com/clasp-developers/clasp.git && \
+    git clone https://github.com/cando-developers/cando.git clasp/extensions/cando && \
+    cd clasp && \
+    echo "USE_PARALLEL_BUILD = True" > wscript.config && \
     echo "USE_LLD = True" >> wscript.config && \
     echo "CLASP_BUILD_MODE = \"faso\"" >> wscript.config && \
     sed -i s/"--link-static",//g wscript && \
     ./waf configure && ./waf build_cboehm
-#RUN git clone https://github.com/cando-developers/cando.git extensions/cando
-
-COPY --chown=${APP_UID}:${APP_USER} home ${HOME}
 
 USER root
-RUN ./waf install_cboehm
+RUN cd clasp && ./waf install_cboehm && cd .. && rm -rf clasp
 
 USER ${APP_USER}
 WORKDIR ${HOME}
@@ -57,13 +54,9 @@ WORKDIR ${HOME}
 RUN pip3 install --user jupyter jupyterlab jupyter_kernel_test && \
     jupyter serverextension enable --user --py jupyterlab && \
     jupyter labextension install @jupyter-widgets/jupyterlab-manager && \
-    jupyter nbextension enable --user --py widgetsnbextension
-
-RUN echo "bar"
-RUN git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git ${HOME}/quicklisp/local-projects/common-lisp-jupyter && \
-    git clone https://github.com/clasp-developers/bordeaux-threads.git ${HOME}/quicklisp/local-projects/bordeaux-threads
-
-RUN sbcl --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit
-RUN iclasp-boehm --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit
+    jupyter nbextension enable --user --py widgetsnbextension && \
+    git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git ${HOME}/quicklisp/local-projects/common-lisp-jupyter && \
+    sbcl --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
+    iclasp-boehm --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit
 
 CMD jupyter-lab --ip=0.0.0.0
