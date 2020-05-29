@@ -49,22 +49,34 @@ RUN wget https://beta.quicklisp.org/quicklisp.lisp && \
 
 USER root
 RUN cd clasp && ./waf install_cboehm && cd .. && rm -rf clasp
+RUN rm -rf /usr/local/lib/clasp/extensions/cando/src/lisp/cando-jupyter
 
 USER ${APP_USER}
 
 RUN pip3 install --user jupyter jupyter_kernel_test nglview==1.2.0 && \
     jupyter nbextension enable --py widgetsnbextension && \
     jupyter nbextension enable --py nglview && \
-    git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git ${HOME}/quicklisp/local-projects/common-lisp-jupyter && \
-    mkdir -p ${HOME}/quicklisp/local-projects/cl-nglview && \
-    cd ${HOME}/quicklisp/local-projects/cl-nglview && \
+    git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git quicklisp/local-projects/common-lisp-jupyter && \
+    mkdir -p quicklisp/local-projects/cl-nglview && \
+    cd quicklisp/local-projects/cl-nglview && \
     git init && \
     git remote add -f origin https://github.com/yitzchak/cl-nglview.git && \
     git config core.sparseCheckout true && \
     echo "cl-nglview/" >> .git/info/sparse-checkout && \
     git pull origin master && \
     git checkout clj-migrate && \
-    sbcl --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
-    clasp --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit
+    cd ../../.. && \
+    mkdir -p quicklisp/local-projects/cando-jupyter && \
+    cd quicklisp/local-projects/cando-jupyter && \
+    git init && \
+    git remote add -f origin https://github.com/yitzchak/cando.git && \
+    git config core.sparseCheckout true && \
+    echo "src/lisp/cando-jupyter/" >> .git/info/sparse-checkout && \
+    git pull origin master && \
+    git checkout clj-migrate && \
+    cd ../../.. && \
+    sbcl --eval "(ql:quickload '(:common-lisp-jupyter :cl-nglview))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
+    clasp --eval "(ql:quickload '(:common-lisp-jupyter :cl-nglview))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
+    cando --eval "(ql:quickload :cando-jupyter)" --eval "(cando-jupyter:install)" --quit
 
 CMD jupyter-notebook --ip=0.0.0.0
