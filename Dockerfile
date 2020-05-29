@@ -52,12 +52,19 @@ RUN cd clasp && ./waf install_cboehm && cd .. && rm -rf clasp
 
 USER ${APP_USER}
 
-RUN pip3 install --user jupyter jupyterlab jupyter_kernel_test && \
-    jupyter serverextension enable --user --py jupyterlab && \
-    jupyter labextension install @jupyter-widgets/jupyterlab-manager && \
-    jupyter nbextension enable --user --py widgetsnbextension && \
-    git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git quicklisp/local-projects/common-lisp-jupyter && \
+RUN pip3 install --user jupyter jupyter_kernel_test nglview==1.2.0 && \
+    jupyter nbextension enable --py widgetsnbextension && \
+    jupyter nbextension enable --py nglview && \
+    git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git ${HOME}/quicklisp/local-projects/common-lisp-jupyter && \
+    mkdir -p ${HOME}/quicklisp/local-projects/cl-nglview && \
+    cd ${HOME}/quicklisp/local-projects/cl-nglview && \
+    git init && \
+    git remote add -f origin https://github.com/yitzchak/cl-nglview.git && \
+    git config core.sparseCheckout true && \
+    echo "cl-nglview/" >> .git/info/sparse-checkout && \
+    git pull origin master && \
+    git checkout clj-migrate && \
     sbcl --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
     clasp --eval "(ql:quickload '(:common-lisp-jupyter))" --eval "(cl-jupyter:install :use-implementation t)" --quit
 
-CMD jupyter-lab --ip=0.0.0.0
+CMD jupyter-notebook --ip=0.0.0.0
