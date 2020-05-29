@@ -52,10 +52,14 @@ RUN cd clasp && ./waf install_cboehm && cd .. && rm -rf clasp
 RUN rm -rf /usr/local/lib/clasp/extensions/cando/src/lisp/cando-jupyter
 
 USER ${APP_USER}
+ENV SLIME_HOME "${HOME}/quicklisp/local-projects/slime"
 
-RUN pip3 install --user jupyter jupyter_kernel_test nglview==1.2.0 && \
-    jupyter nbextension enable --py widgetsnbextension && \
-    jupyter nbextension enable --py nglview && \
+RUN pip3 install --user jupyter jupyterlab jupyter_kernel_test nglview==1.2.0 && \
+    jupyter nbextension enable --user --py widgetsnbextension && \
+    jupyter nbextension enable --user --py nglview && \
+    jupyter serverextension enable --user --py jupyterlab && \
+    jupyter labextension install @jupyter-widgets/jupyterlab-manager nglview-js-widgets && \
+    git clone https://github.com/slime/slime.git quicklisp/local-projects/slime && \
     git clone -b clasp-updates https://github.com/yitzchak/common-lisp-jupyter.git quicklisp/local-projects/common-lisp-jupyter && \
     mkdir -p quicklisp/local-projects/cl-nglview && \
     cd quicklisp/local-projects/cl-nglview && \
@@ -76,7 +80,8 @@ RUN pip3 install --user jupyter jupyter_kernel_test nglview==1.2.0 && \
     git checkout clj-migrate && \
     cd ../../.. && \
     sbcl --eval "(ql:quickload '(:common-lisp-jupyter :cl-nglview))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
-    clasp --eval "(ql:quickload '(:common-lisp-jupyter :cl-nglview))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
-    cando --eval "(ql:quickload :cando-jupyter)" --eval "(cando-jupyter:install)" --quit
+    clasp -N --eval "(ql:quickload '(:common-lisp-jupyter :cl-nglview))" --eval "(cl-jupyter:install :use-implementation t)" --quit && \
+    cando -N --eval "(ql:quickload :cando-jupyter)" --eval "(cando-jupyter:install)" --quit && \
+    clasp -N --eval "(ql:quickload :swank)" --eval "(swank-loader:init :delete nil :reload nil :load-contribs nil)" --quit
 
-CMD jupyter-notebook --ip=0.0.0.0
+CMD jupyter-notebook --no-browser --ip=0.0.0.0
